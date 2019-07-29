@@ -25,6 +25,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "STLinkUSBDriver.h"
 
+#include <libusb-1.0/libusb.h>
+
+
 #ifdef USING_ERRORLOG
 #include "ErrLog.h"
 // Also use trace.log for test
@@ -48,6 +51,9 @@ typedef enum {
 	STLINKIF_STLINK_SN_NOT_FOUND,///< Required STLink serial number not found error
 	STLINKIF_CLOSE_ERR           ///< Error during device Close
 } STLinkIf_StatusT;
+
+#define STLINK_V3_VID 0x0483
+#define STLINK_V3_PID 0x374F
 
 /* Class -------------------------------------------------------------------- */
 /// STLinkInterface Class
@@ -83,7 +89,9 @@ public:
 #endif
 
 private:
-
+	libusb_context *ctx = nullptr; //a libusb session
+	libusb_device* devices[256];
+	ssize_t cnt;
 	STLinkIf_StatusT EnumDevicesIfRequired(uint32_t *pNumDevices, bool bForceRenum, bool bClearList);
 
 #ifdef WIN32 //Defined for applications for Win32 and Win64.
@@ -117,6 +125,13 @@ private:
 	// Error log management
 	cErrLog *m_pErrLog;
 #endif
+
+	uint32_t STLink_GetNbDevices(TEnumStlinkInterface IfId);
+	uint32_t STLink_GetDeviceInfo2(TEnumStlinkInterface IfId, uint8_t DevIdxInList, TDeviceInfo2 *pInfo, uint32_t InfoSize);
+	uint32_t STLink_OpenDevice(TEnumStlinkInterface IfId, uint8_t DevIdxInList, uint8_t bExclusiveAccess, void ** pHandle);
+	uint32_t STLink_CloseDevice(void * pHandle);
+	uint32_t STLink_SendCommand(void * pHandle, PDeviceRequest pRequest, uint32_t DwTimeOut);
+	uint32_t STLink_Reenumerate(TEnumStlinkInterface IfId, uint8_t bClearList);
 };
 
 #endif //_STLINK_INTERFACE_H
