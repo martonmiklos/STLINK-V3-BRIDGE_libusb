@@ -6,6 +6,7 @@ Original version can be downloaded from here:
 
 https://www.st.com/en/development-tools/stlink-v3-bridge.html
 
-Warning! the software is not open source it, but licensed under ST's Ultimate Liberty License see:
+## Achtung !! Warning!! Pozor!! 
+The software is not open source it, but licensed under ST's Ultimate Liberty License see:
 
 https://www.st.com/SLA0044
