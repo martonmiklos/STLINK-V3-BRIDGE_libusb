@@ -26,7 +26,7 @@ INCLUDEPATH += src/bridge
 INCLUDEPATH += src/common
 
 LIBS += -L.
-LIBS += -lSTLinkUSBDriver
+LIBS += -lusb-1.0
 
 SOURCES += \
     src/bridge/bridge.cpp \

@@ -4,7 +4,7 @@
   * @author  MCD Application Team
   * @brief   Module to access the STLink device library (STLinkUSBDriver.h).
   *          Manage communication interfaces (USB) to connect to the STLink device. \n
-  *          STLinkInterface class manages USB enumeration and STLink devices detection. 
+  *          STLinkInterface class manages USB enumeration and STLink devices detection.
   *          STLinkInterface object to be initialized before being used by Brg.
   ******************************************************************************
   * @attention
@@ -27,6 +27,9 @@
 
 #include "criticalsectionlock.h"
 #include "stlink_interface.h"
+
+#include <string>
+
 #ifdef WIN32 //Defined for applications for Win32 and Win64.
 #include "shlwapi.h"
 #endif // WIN32
@@ -103,7 +106,10 @@ STLinkInterface::~STLinkInterface(void)
 #else
 	// critical section deletion not needed because static mutex
 
-	STLink_FreeLibrary();
+	//STLink_FreeLibrary();
+	if (m_bApiDllLoaded) {
+		libusb_exit(ctx);
+	}
 #endif // WIN32
 }
 /*
@@ -119,6 +125,193 @@ void STLinkInterface::LogTrace(const char *pMessage, ...)
 	}
 	va_end(args);
 #endif
+}
+
+uint32_t STLinkInterface::STLink_GetNbDevices(TEnumStlinkInterface IfId)
+{
+	uint32_t deviceCount = 0;
+	libusb_device **devs; //pointer to pointer of device, used to retrieve a list of devices
+	cnt = libusb_get_device_list(ctx, &devs); //get the list of devices
+	if (cnt < 0) {
+		return 0;
+	}
+
+	ssize_t i; //for iterating through the list
+	for(i = 0; i < cnt; i++) {
+		libusb_device_descriptor desc = {0};
+		int rc = libusb_get_device_descriptor(devs[i], &desc);
+		if (rc == 0) {
+			if (desc.idVendor == STLINK_V3_VID && desc.idProduct == STLINK_V3_PID) {
+				deviceCount++;
+			}
+		}
+	}
+	libusb_free_device_list(devs, 1); //free the list, unref the devices in it
+	return deviceCount;
+}
+
+//******************************************************************************
+// STLink_GetDeviceInfo2:
+// Retrieves some information about a device
+// replace STLink_GetDeviceInfo
+// Parameters:
+//   IfId, DevIdxInList: selects the device in the list of devices providing the
+//            considered interface
+//   pInfo: pointer to a TDeviceInfo2 structure allocated by the caller
+//   InfoSize: size of the TDeviceInfo2 structure allocated by the caller.
+//             Must be provided in order to properly manage future evolutions:
+//             new fields might be added at the end of the structure,
+//             without compatibility break.
+//
+// Returns:
+//   SS_OK  = SUCCESS
+//   SS_TRUNCATED_DATA in case infoSize is greater than the size of the TDeviceInfo2
+//          managed by the DLL. In that case only the first fields of TDeviceInfo2
+//          are significant; the other ones are set to 0.
+//          Or caller used TDeviceInfo struct and size instead of TDeviceInfo2.
+//   SS_BAD_PARAMETER in case of unexpected values for IfId, DevIdxInList or pInfo
+//******************************************************************************
+uint32_t STLinkInterface::STLink_GetDeviceInfo2(TEnumStlinkInterface IfId, uint8_t DevIdxInList, TDeviceInfo2 *pInfo, uint32_t InfoSize)
+{
+	if (DevIdxInList >= cnt)
+		return SS_BAD_PARAMETER;
+
+	libusb_device *dev = devices[DevIdxInList];
+	libusb_device_descriptor desc = {0};
+	char string[256];
+	int rc = libusb_get_device_descriptor(dev, &desc);
+	if (rc == 0) {
+		pInfo->VendorId = desc.idVendor;
+		pInfo->ProductId = desc.idProduct;
+		pInfo->DeviceUsed = 0;
+		libusb_device_handle *handle = nullptr;
+		int ret = libusb_open(dev, &handle);
+		if (LIBUSB_SUCCESS == ret) {
+			if (desc.iSerialNumber) {
+				ret = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, (unsigned char*)string, sizeof(string));
+				if (ret > 0) {
+					snprintf(pInfo->EnumUniqueId, sizeof(pInfo->EnumUniqueId), "%s", string);
+				}
+			}
+			libusb_close(handle);
+		}
+	}
+	return SS_OK;
+}
+
+//******************************************************************************
+// STLink_OpenDevice:
+// Opens a previously enumerated device
+// Parameters:
+//   IfId, DevIdxInList: selects the device in the list of devices providing the
+//            considered interface
+//   bExclusiveAccess: if 0, the device is opened in shared mode (different
+//            applications might share access to the same device);
+//            otherwise the device is opened in exclusive mode (fails if already
+//            opened by someone else, and if opened successfully, will make fail
+//            any attempt to open from others)
+//   pHandle: handle returned if successful. Required for accessing the device.
+//
+// Returns: SS_OK  = SUCCESS, Error otherwise (Error Code)
+//******************************************************************************
+uint32_t STLinkInterface::STLink_OpenDevice(TEnumStlinkInterface IfId, uint8_t DevIdxInList, uint8_t bExclusiveAccess, void **pHandle)
+{
+	if (DevIdxInList >= cnt)
+		return SS_BAD_PARAMETER;
+
+	libusb_device *dev = devices[DevIdxInList];
+	libusb_device_handle *handle = nullptr;
+	int ret = libusb_open(dev, &handle);
+	if (LIBUSB_SUCCESS == ret) {
+		*pHandle = handle;
+		return  SS_OK;
+	}
+	return SS_ERR;
+}
+
+//******************************************************************************
+// STLink_CloseDevice:
+// Closes a previously opened device
+// Parameters:
+//   pHandle: handle (as returned by STLink_OpenDevice) to be closed
+//
+// Returns: SS_OK  = SUCCESS, Error otherwise (Error Code)
+//******************************************************************************
+uint32_t STLinkInterface::STLink_CloseDevice(void *pHandle)
+{
+	libusb_close((libusb_device_handle*)pHandle);
+}
+//******************************************************************************
+// STLink_SendCommand:
+// Sends a PDeviceRequest command to a previously opened device
+// Parameters:
+//   pHandle: handle for device
+//   pRequest: request to be issued
+//   DwTimeOut: TimeOut for request completion
+//
+// Returns: SS_OK  = SUCCESS, Error otherwise (Error Code)
+//******************************************************************************
+uint32_t STLinkInterface::STLink_SendCommand(void *pHandle, PDeviceRequest pRequest, uint32_t DwTimeOut)
+{
+	libusb_device_handle *handle = (libusb_device_handle *)pHandle;
+	int actualLength = 0;
+	int rc = libusb_bulk_transfer(handle, 0x06, (unsigned char*)pRequest->CDBByte, (int)pRequest->CDBLength, &actualLength, DwTimeOut);
+	if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == (int)pRequest->CDBLength) {
+		rc = libusb_bulk_transfer(handle, 0x86, (unsigned char*)pRequest->Buffer, (int)pRequest->BufferLength, &actualLength, DwTimeOut);
+		if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == pRequest->BufferLength) {
+			return SS_OK;
+		} else {
+			return SS_ERR;
+		}
+	}
+	return SS_ERR;
+}
+
+//******************************************************************************
+// STLink_Reenumerate:
+// Build the list of presently connected devices providing the given interface.
+// The list is kept locally until next call. The list is internally limited to
+// MAX_DEVICES (60), exceeding devices (if any) are ignored.
+//
+// If bClearList == 0:
+//   - Opened devices remain in the list if still present on the system (but
+//     potentially with a different index in the list => use of handles instead
+//     of indexes is required because of that)
+//   - Opened devices that are no more present on the system are closed and
+//     handles are deleted.
+//
+// If bClearList != 0:
+//   - All opened devices are closed and handles are deleted.
+//   - The use of a previously returned handle is UNPREDICTABLE (might either fail
+//     because the handle is no more known, or might address a newly renumerated
+//     device that has been granted the same handle by chance ...
+//   - Useful for closing all devices is case returned handles have been lost by the
+//     caller. In standard case, bClearList == 0 has to be preferred.
+//
+// Returns: SS_OK  = SUCCESS, Error otherwise (Error Code)
+//******************************************************************************
+uint32_t STLinkInterface::STLink_Reenumerate(TEnumStlinkInterface IfId, uint8_t bClearList)
+{
+	uint32_t deviceCount = 0;
+	libusb_device **devs;
+	ssize_t cnt; //holding number of devices in list
+	cnt = libusb_get_device_list(ctx, &devs); //get the list of devices
+	if (cnt < 0) {
+		return 0;
+	}
+
+	ssize_t i; //for iterating through the list
+	for(i = 0; i < cnt; i++) {
+		libusb_device_descriptor desc;
+		int rc = libusb_get_device_descriptor(devs[i], &desc);
+		if (rc == 0) {
+			if (desc.idVendor == STLINK_V3_VID && desc.idProduct == STLINK_V3_PID) {
+				devices[deviceCount] = devs[i];
+				deviceCount++;
+			}
+		}
+	}
+	return SS_OK;
 }
 
 /**
@@ -142,76 +335,16 @@ STLinkIf_StatusT  STLinkInterface::LoadStlinkLibrary(const char *pPathOfProcess)
 	}
 
 	if( m_bApiDllLoaded == false ) {
-		// Load the STLinkUSBDriver library only once in a session
-		if( pPathOfProcess != NULL ) {
-			// Memorize the path of process
-#if defined(_MSC_VER) &&  (_MSC_VER >= 1400) /* VC8+ (VS2005) */
-			::strncpy_s(m_pathOfProcess, MAX_PATH, pPathOfProcess, MAX_PATH);
-#else
-			::strncpy(m_pathOfProcess, pPathOfProcess, MAX_PATH);
-#endif
-		}
-
-#ifdef WIN32 //Defined for applications for Win32 and Win64.
-		if( m_hMod == NULL ) {
-			// First try from this DLL path
-			if( pPathOfProcess != NULL ) {
-				char szDllPath[_MAX_PATH];
-#if defined(_MSC_VER) &&  (_MSC_VER >= 1400) /* VC8+ (VS2005) */
-				::strncpy_s(szDllPath, _MAX_PATH, m_pathOfProcess, _MAX_PATH);
-#else
-				::strncpy(szDllPath, m_pathOfProcess, _MAX_PATH);
-#endif
-				// Note: Unicode is not supported (would require T_CHAR szDllPath, to include <tchar.h> 
-				// and to use generic function PathAppend(szDllPath, _T("STLinkUSBDriver.dll")) 
-				::PathAppendA(szDllPath, "STLinkUSBDriver.dll");
-
-				m_hMod = LoadLibraryA(szDllPath);
-			}
-		}
-
-		if( m_hMod == NULL ) {
-			// Second try using the whole procedure for path resolution (including PATH environment variable)
-			m_hMod = LoadLibraryA("STLinkUSBDriver.dll");
-		}
-
-		if( m_hMod == NULL ) {
-			LogTrace("STLinkInterface Failure loading STLinkUSBDriver.dll");
-			ifStatus = STLINKIF_DLL_ERR;
-		}
-
-		if( ifStatus == STLINKIF_NO_ERR ) {
-			LogTrace("STLinkInterface STLinkUSBDriver.dll loaded");
-			if( m_ifId == STLINK_BRIDGE ) {
-				// Get the needed API
-				STLink_Reenumerate    = (pSTLink_Reenumerate)   GetProcAddress(m_hMod, ("STLink_Reenumerate"));
-				STLink_GetNbDevices   = (pSTLink_GetNbDevices)  GetProcAddress(m_hMod, ("STLink_GetNbDevices"));
-				STLink_GetDeviceInfo2 = (pSTLink_GetDeviceInfo2)GetProcAddress(m_hMod, ("STLink_GetDeviceInfo2"));
-				STLink_OpenDevice     = (pSTLink_OpenDevice)    GetProcAddress(m_hMod, ("STLink_OpenDevice"));
-				STLink_CloseDevice    = (pSTLink_CloseDevice)   GetProcAddress(m_hMod, ("STLink_CloseDevice"));
-				STLink_SendCommand    = (pSTLink_SendCommand)   GetProcAddress(m_hMod, ("STLink_SendCommand"));
-
-				// Check if DLL supports at least required function, this is mandatory but not enough for BRIDGE support
-				// STLink_Reenumerate will return SS_BAD_PARAMETER if DLL is too old and Bridge interface is not supported.
-				if( (STLink_Reenumerate == NULL) || (STLink_GetNbDevices == NULL) 
-					|| (STLink_GetDeviceInfo2 == NULL) || (STLink_OpenDevice == NULL) || (STLink_CloseDevice == NULL)
-					|| (STLink_SendCommand == NULL) ) {
-					// TCP routines are required and missing
-					ifStatus = STLINKIF_DLL_ERR;
-				}
-			}
-		}
-#else // !WIN32
-        // nothing to do
-#endif
-		if( ifStatus == STLINKIF_NO_ERR ) {
+		int res = libusb_init(&ctx);
+		if (res == 0) {
+			libusb_set_debug(ctx, 3); //set verbosity level to 3, as suggested in the documentation
 			m_bApiDllLoaded = true;
 		}
 	}
 	return ifStatus;
 }
 /*
- * @brief Return true if STLinkInterface::LoadStlinkLibrary() has been called successfully. 
+ * @brief Return true if STLinkInterface::LoadStlinkLibrary() has been called successfully.
  */
 bool STLinkInterface::IsLibraryLoaded() {
 	return m_bApiDllLoaded;
@@ -228,7 +361,7 @@ bool STLinkInterface::IsLibraryLoaded() {
  *               because the handle is no more known, or might address a newly renumerated
  *               device that has been granted the same handle by chance ... \n
  *               - Useful for closing all devices is case returned handles have been lost by the
- *               caller. In standard case, bClearList == 0 has to be preferred.  
+ *               caller. In standard case, bClearList == 0 has to be preferred.
  * @param[out] pNumDevices Pointer where the function returns the number of connected STLink m_ifId interfaces.
  *                          Can be NULL if not wanted.
  *
@@ -239,13 +372,13 @@ bool STLinkInterface::IsLibraryLoaded() {
  * @retval #STLINKIF_DLL_ERR  STLinkUSBDriver library not loaded
  * @retval #STLINKIF_NO_ERR If no error
  */
-STLinkIf_StatusT STLinkInterface::EnumDevices(uint32_t *pNumDevices, bool bClearList)
+STLinkIf_StatusT STLinkInterface:: EnumDevices(uint32_t *pNumDevices, bool bClearList)
 {
 	STLinkIf_StatusT ifStatus = STLINKIF_NOT_SUPPORTED;
 	uint32_t status = SS_OK;
 
-	if( pNumDevices != NULL ) {
-		*pNumDevices=0; // default if error
+	if( pNumDevices != nullptr ) {
+		*pNumDevices = 0; // default if error
 	}
 
 	if( IsLibraryLoaded() == true ) {
@@ -257,7 +390,7 @@ STLinkIf_StatusT STLinkInterface::EnumDevices(uint32_t *pNumDevices, bool bClear
 				return STLINKIF_DLL_ERR;
 			}
 			// Note that STLink_Reenumerate might fail because of issue during serial number retrieving
-			// which is not a blocking error here; 
+			// which is not a blocking error here;
 			m_nbEnumDevices = STLink_GetNbDevices(m_ifId);
 
 			if( m_nbEnumDevices == 0 ) {
@@ -346,7 +479,7 @@ STLinkIf_StatusT STLinkInterface::EnumDevicesIfRequired(uint32_t *pNumDevices, b
  *
  * @param[in]  StlinkInstId   STLink device index, from 0 to *pNumDevices-1
  *                            (value returned by STLinkInterface::EnumDevices())
- * @param[in]  InfoSize   Size of the allocated #STLink_DeviceInfo2T instance. 
+ * @param[in]  InfoSize   Size of the allocated #STLink_DeviceInfo2T instance.
  *               Required for ascendant compatibility in case this structure grows in the future.
  *               If the allocated size is smaller than the size managed by STLinkUSBDriver library,
  *               returned data are limited to the given size. In case the allocated size
@@ -367,7 +500,7 @@ STLinkIf_StatusT STLinkInterface::GetDeviceInfo2(int StlinkInstId, STLink_Device
 	if( IsLibraryLoaded() == true ) {
 #ifdef WIN32
 		if( STLink_GetDeviceInfo2 == NULL ) {
-			// STLinkUSBDriver is too old 
+			// STLinkUSBDriver is too old
 			return STLINKIF_NOT_SUPPORTED;
 		}
 #endif
@@ -485,7 +618,7 @@ STLinkIf_StatusT STLinkInterface::OpenDevice(const char *pSerialNumber, bool bSt
 
 	// Look for the given serialNumber
 	for( stlinkInstId=0; (uint32_t)stlinkInstId<m_nbEnumDevices; stlinkInstId++ ) {
-		ifStatus = GetDeviceInfo2(stlinkInstId, &devInfo2, sizeof(devInfo2));		
+		ifStatus = GetDeviceInfo2(stlinkInstId, &devInfo2, sizeof(devInfo2));
 		if( ifStatus != STLINKIF_NO_ERR ) {
 			return ifStatus;
 		}
@@ -498,7 +631,7 @@ STLinkIf_StatusT STLinkInterface::OpenDevice(const char *pSerialNumber, bool bSt
 	if( (bStrict == false) && (m_nbEnumDevices==1) ) {
 		// There is currently only one device connected, and the caller did not expected a full matching
 		LogTrace("STLink serial number (%s) not found; opening the (lonely) connected STLink (SN=%s)",
-			pSerialNumber, pEnumUniqueId);
+				 pSerialNumber, pEnumUniqueId);
 		return OpenDevice(0, 0, bOpenExclusive, pHandle);
 	}
 	LogTrace("STLink serial number (%s) not found; can not open.", pSerialNumber);
@@ -513,7 +646,7 @@ STLinkIf_StatusT STLinkInterface::OpenDevice(const char *pSerialNumber, bool bSt
  *
  * @retval #STLINKIF_CLOSE_ERR Error at USB side
  * @retval #STLINKIF_NOT_SUPPORTED m_ifId not supported yet
- * @retval #STLINKIF_DLL_ERR 
+ * @retval #STLINKIF_DLL_ERR
  * @retval #STLINKIF_NO_ERR If no error
  */
 STLinkIf_StatusT STLinkInterface::CloseDevice(void *pHandle, uint32_t StlinkIdTcp)
@@ -550,12 +683,12 @@ STLinkIf_StatusT STLinkInterface::CloseDevice(void *pHandle, uint32_t StlinkIdTc
  * @retval #STLINKIF_PARAM_ERR Null pointer error
  * @retval #STLINKIF_USB_COMM_ERR USB communication error
  * @retval #STLINKIF_NOT_SUPPORTED m_ifId not supported yet
- * @retval #STLINKIF_DLL_ERR 
+ * @retval #STLINKIF_DLL_ERR
  * @retval #STLINKIF_NO_ERR If no error
  */
 STLinkIf_StatusT STLinkInterface::SendCommand(void *pHandle,
-                                              uint32_t StlinkIdTcp, STLink_DeviceRequestT *pDevReq,
-                                              const uint16_t UsbTimeoutMs)
+											  uint32_t StlinkIdTcp, STLink_DeviceRequestT *pDevReq,
+											  const uint16_t UsbTimeoutMs)
 {
 	uint32_t ret;
 	uint32_t usbTimeout = DEFAULT_TIMEOUT;
@@ -565,7 +698,7 @@ STLinkIf_StatusT STLinkInterface::SendCommand(void *pHandle,
 		return STLINKIF_PARAM_ERR;
 	}
 
-	// Create a Mutex to avoid concurrent access to STLink_SendCommand 
+	// Create a Mutex to avoid concurrent access to STLink_SendCommand
 	CSLocker locker(g_csInterface);
 
 	if( IsLibraryLoaded() == true ) {
@@ -574,15 +707,15 @@ STLinkIf_StatusT STLinkInterface::SendCommand(void *pHandle,
 			if( UsbTimeoutMs != 0 ) {
 				usbTimeout = (uint32_t) UsbTimeoutMs;
 			}
-			ret=STLink_SendCommand(pHandle, pDevReq, usbTimeout);
+			ret = STLink_SendCommand(pHandle, pDevReq, usbTimeout);
 
 			if( ret != SS_OK ) {
 				LogTrace("%s USB communication error (%d) after target cmd %02hX %02hX %02hX %02hX %02hX %02hX %02hX %02hX %02hX %02hX",
-					LogIfString[m_ifId], (int)ret,
-					(unsigned short)pDevReq->CDBByte[0], (unsigned short)pDevReq->CDBByte[1], (unsigned short)pDevReq->CDBByte[2],
-					(unsigned short)pDevReq->CDBByte[3], (unsigned short)pDevReq->CDBByte[4], (unsigned short)pDevReq->CDBByte[5], 
-					(unsigned short)pDevReq->CDBByte[6], (unsigned short)pDevReq->CDBByte[7], (unsigned short)pDevReq->CDBByte[8],
-					(unsigned short)pDevReq->CDBByte[9]);
+						 LogIfString[m_ifId], (int)ret,
+						 (unsigned short)pDevReq->CDBByte[0], (unsigned short)pDevReq->CDBByte[1], (unsigned short)pDevReq->CDBByte[2],
+						(unsigned short)pDevReq->CDBByte[3], (unsigned short)pDevReq->CDBByte[4], (unsigned short)pDevReq->CDBByte[5],
+						(unsigned short)pDevReq->CDBByte[6], (unsigned short)pDevReq->CDBByte[7], (unsigned short)pDevReq->CDBByte[8],
+						(unsigned short)pDevReq->CDBByte[9]);
 				ifStatus = STLINKIF_USB_COMM_ERR;
 			} else {
 				ifStatus = STLINKIF_NO_ERR;
