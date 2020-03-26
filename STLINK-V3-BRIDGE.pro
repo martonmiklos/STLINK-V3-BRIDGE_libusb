@@ -9,7 +9,7 @@ QT       -= core gui
 TARGET = STLINK-V3-BRIDGE
 TEMPLATE = lib
 
-DEFINES += STLINKV3BRIDGE_LIBRARY
+DEFINES += STLINKV3BRIDGE_LIBRARY PATH_MAX=4600
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
@@ -52,3 +52,5 @@ unix {
     target.path = /usr/lib
     INSTALLS += target
 }
+
+FORMS +=
