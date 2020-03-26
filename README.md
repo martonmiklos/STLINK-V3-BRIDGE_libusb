@@ -2,6 +2,10 @@
 
 STLINK-V3-BRIDGE API which does not uses the ST's libSTLinkUSBDriver but uses libusb.
 
+qmake based buildsystem needed to compile it. 
+
+I am open for PRs adding automake/cmake based build setup.
+
 Original version can be downloaded from here:
 
 https://www.st.com/en/development-tools/stlink-v3-bridge.html
