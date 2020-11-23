@@ -563,7 +563,7 @@ Brg_StatusT Brg::InitSPI(const Brg_SpiInitT *pInitParams)
  * @retval #BRG_PARAM_ERR In case of wrong parameter
  * @retval #BRG_NO_ERR If no error
  */
-Brg_StatusT Brg::GetSPIbaudratePrescal(uint32_t ReqSpiFreqKHz, SPI_prescaler_t *pBaudrate, uint32_t *pFinalSpiFreqKHz)
+Brg_StatusT Brg::GetSPIbaudratePrescal(uint32_t ReqSpiFreqKHz, Brg_SpiBaudrateT *pBaudrate, uint32_t *pFinalSpiFreqKHz)
 {
 	Brg_StatusT brgStat;
 	uint32_t spiInputClkKHz=0;
