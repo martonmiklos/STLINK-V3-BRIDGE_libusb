@@ -222,6 +222,7 @@ uint32_t STLinkInterface::STLink_OpenDevice(TEnumStlinkInterface IfId, uint8_t D
 	libusb_device *dev = devices[DevIdxInList];
 	libusb_device_handle *handle = nullptr;
 	int ret = libusb_open(dev, &handle);
+	libusb_claim_interface(handle, 3);
 	if (LIBUSB_SUCCESS == ret) {
 		*pHandle = handle;
 		return  SS_OK;
@@ -239,6 +240,7 @@ uint32_t STLinkInterface::STLink_OpenDevice(TEnumStlinkInterface IfId, uint8_t D
 //******************************************************************************
 uint32_t STLinkInterface::STLink_CloseDevice(void *pHandle)
 {
+	libusb_release_interface((libusb_device_handle*)pHandle, 3);
 	libusb_close((libusb_device_handle*)pHandle);
 }
 //******************************************************************************
