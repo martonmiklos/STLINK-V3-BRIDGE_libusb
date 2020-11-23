@@ -141,7 +141,8 @@ uint32_t STLinkInterface::STLink_GetNbDevices(TEnumStlinkInterface IfId)
 		libusb_device_descriptor desc = {0};
 		int rc = libusb_get_device_descriptor(devs[i], &desc);
 		if (rc == 0) {
-			if (desc.idVendor == STLINK_V3_VID && desc.idProduct == STLINK_V3_PID) {
+			if (desc.idVendor == STLINK_V3_VID && 
+				std::find(std::begin(STLINK_V3_PID), std::end(STLINK_V3_PID), desc.idProduct) != std::end(STLINK_V3_PID)) {
 				deviceCount++;
 			}
 		}
@@ -310,7 +311,8 @@ uint32_t STLinkInterface::STLink_Reenumerate(TEnumStlinkInterface IfId, uint8_t 
 		libusb_device_descriptor desc;
 		int rc = libusb_get_device_descriptor(devs[i], &desc);
 		if (rc == 0) {
-			if (desc.idVendor == STLINK_V3_VID && desc.idProduct == STLINK_V3_PID) {
+			if (desc.idVendor == STLINK_V3_VID && 
+				std::find(std::begin(STLINK_V3_PID), std::end(STLINK_V3_PID), desc.idProduct) != std::end(STLINK_V3_PID)) {
 				devices[deviceCount] = devs[i];
 				deviceCount++;
 			}
