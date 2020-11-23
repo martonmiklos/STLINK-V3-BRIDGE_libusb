@@ -243,6 +243,7 @@ uint32_t STLinkInterface::STLink_CloseDevice(void *pHandle)
 {
 	libusb_release_interface((libusb_device_handle*)pHandle, 3);
 	libusb_close((libusb_device_handle*)pHandle);
+	return SS_OK;
 }
 //******************************************************************************
 // STLink_SendCommand:
@@ -262,7 +263,7 @@ uint32_t STLinkInterface::STLink_SendCommand(void *pHandle, PDeviceRequest pRequ
 	if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == (int)pRequest->CDBLength) {
 		if (pRequest->BufferLength > 0) {
 			rc = libusb_bulk_transfer(handle, 0x86, (unsigned char*)pRequest->Buffer, (int)pRequest->BufferLength, &actualLength, DwTimeOut);
-			if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == pRequest->BufferLength) {
+			if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == (int)pRequest->BufferLength) {
 				return SS_OK;
 			} else {
 				return SS_ERR;
@@ -344,7 +345,7 @@ STLinkIf_StatusT  STLinkInterface::LoadStlinkLibrary(const char *pPathOfProcess)
 	if( m_bApiDllLoaded == false ) {
 		int res = libusb_init(&ctx);
 		if (res == 0) {
-			libusb_set_debug(ctx, 3); //set verbosity level to 3, as suggested in the documentation
+			libusb_set_option(ctx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_INFO);
 			m_bApiDllLoaded = true;
 		}
 	}
@@ -456,7 +457,7 @@ STLinkIf_StatusT STLinkInterface:: EnumDevices(uint32_t *pNumDevices, bool bClea
 STLinkIf_StatusT STLinkInterface::EnumDevicesIfRequired(uint32_t *pNumDevices, bool bForceRenum, bool bClearList)
 {
 	STLinkIf_StatusT ifStatus=STLINKIF_NO_ERR;
-	uint32_t status = SS_OK;
+	// uint32_t status = SS_OK;
 
 	if( pNumDevices != NULL ) {
 		// Will return 0 in case of error
