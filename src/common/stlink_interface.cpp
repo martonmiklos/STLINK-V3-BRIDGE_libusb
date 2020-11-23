@@ -257,12 +257,15 @@ uint32_t STLinkInterface::STLink_SendCommand(void *pHandle, PDeviceRequest pRequ
 	int actualLength = 0;
 	int rc = libusb_bulk_transfer(handle, 0x06, (unsigned char*)pRequest->CDBByte, (int)pRequest->CDBLength, &actualLength, DwTimeOut);
 	if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == (int)pRequest->CDBLength) {
-		rc = libusb_bulk_transfer(handle, 0x86, (unsigned char*)pRequest->Buffer, (int)pRequest->BufferLength, &actualLength, DwTimeOut);
-		if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == pRequest->BufferLength) {
-			return SS_OK;
-		} else {
-			return SS_ERR;
+		if (pRequest->BufferLength > 0) {
+			rc = libusb_bulk_transfer(handle, 0x86, (unsigned char*)pRequest->Buffer, (int)pRequest->BufferLength, &actualLength, DwTimeOut);
+			if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == pRequest->BufferLength) {
+				return SS_OK;
+			} else {
+				return SS_ERR;
+			}
 		}
+		return SS_OK;
 	}
 	return SS_ERR;
 }
