@@ -141,7 +141,8 @@ uint32_t STLinkInterface::STLink_GetNbDevices(TEnumStlinkInterface IfId)
 		libusb_device_descriptor desc = {0};
 		int rc = libusb_get_device_descriptor(devs[i], &desc);
 		if (rc == 0) {
-			if (desc.idVendor == STLINK_V3_VID && desc.idProduct == STLINK_V3_PID) {
+			if (desc.idVendor == STLINK_V3_VID && 
+				std::find(std::begin(STLINK_V3_PID), std::end(STLINK_V3_PID), desc.idProduct) != std::end(STLINK_V3_PID)) {
 				deviceCount++;
 			}
 		}
@@ -222,6 +223,7 @@ uint32_t STLinkInterface::STLink_OpenDevice(TEnumStlinkInterface IfId, uint8_t D
 	libusb_device *dev = devices[DevIdxInList];
 	libusb_device_handle *handle = nullptr;
 	int ret = libusb_open(dev, &handle);
+	libusb_claim_interface(handle, 3);
 	if (LIBUSB_SUCCESS == ret) {
 		*pHandle = handle;
 		return  SS_OK;
@@ -239,7 +241,9 @@ uint32_t STLinkInterface::STLink_OpenDevice(TEnumStlinkInterface IfId, uint8_t D
 //******************************************************************************
 uint32_t STLinkInterface::STLink_CloseDevice(void *pHandle)
 {
+	libusb_release_interface((libusb_device_handle*)pHandle, 3);
 	libusb_close((libusb_device_handle*)pHandle);
+	return SS_OK;
 }
 //******************************************************************************
 // STLink_SendCommand:
@@ -255,16 +259,20 @@ uint32_t STLinkInterface::STLink_SendCommand(void *pHandle, PDeviceRequest pRequ
 {
 	libusb_device_handle *handle = (libusb_device_handle *)pHandle;
 	int actualLength = 0;
+
+	// transmit command
 	int rc = libusb_bulk_transfer(handle, 0x06, (unsigned char*)pRequest->CDBByte, (int)pRequest->CDBLength, &actualLength, DwTimeOut);
-	if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == (int)pRequest->CDBLength) {
-		rc = libusb_bulk_transfer(handle, 0x86, (unsigned char*)pRequest->Buffer, (int)pRequest->BufferLength, &actualLength, DwTimeOut);
-		if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == pRequest->BufferLength) {
-			return SS_OK;
-		} else {
-			return SS_ERR;
-		}
-	}
-	return SS_ERR;
+	if (rc != LIBUSB_TRANSFER_COMPLETED || actualLength != (int)pRequest->CDBLength)
+		return SS_ERR;
+	if (pRequest->BufferLength == 0) // 0 length transfer should be supported, but breaks comms
+		return SS_OK;
+	// read or write depending on request type
+	unsigned char ep = pRequest->InputRequest == REQUEST_READ_1ST_EPIN ? 0x86 : 0x06; // else REQUEST_WRITE_1ST_EPOUT
+	rc = libusb_bulk_transfer(handle, ep, (unsigned char*)pRequest->Buffer, (int)pRequest->BufferLength, &actualLength, DwTimeOut);
+	if (rc != LIBUSB_TRANSFER_COMPLETED || actualLength != (int)pRequest->BufferLength)
+		return SS_ERR;
+
+	return SS_OK;
 }
 
 //******************************************************************************
@@ -305,7 +313,8 @@ uint32_t STLinkInterface::STLink_Reenumerate(TEnumStlinkInterface IfId, uint8_t 
 		libusb_device_descriptor desc;
 		int rc = libusb_get_device_descriptor(devs[i], &desc);
 		if (rc == 0) {
-			if (desc.idVendor == STLINK_V3_VID && desc.idProduct == STLINK_V3_PID) {
+			if (desc.idVendor == STLINK_V3_VID && 
+				std::find(std::begin(STLINK_V3_PID), std::end(STLINK_V3_PID), desc.idProduct) != std::end(STLINK_V3_PID)) {
 				devices[deviceCount] = devs[i];
 				deviceCount++;
 			}
@@ -337,7 +346,7 @@ STLinkIf_StatusT  STLinkInterface::LoadStlinkLibrary(const char *pPathOfProcess)
 	if( m_bApiDllLoaded == false ) {
 		int res = libusb_init(&ctx);
 		if (res == 0) {
-			libusb_set_debug(ctx, 3); //set verbosity level to 3, as suggested in the documentation
+			libusb_set_option(ctx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_INFO);
 			m_bApiDllLoaded = true;
 		}
 	}
@@ -449,7 +458,7 @@ STLinkIf_StatusT STLinkInterface:: EnumDevices(uint32_t *pNumDevices, bool bClea
 STLinkIf_StatusT STLinkInterface::EnumDevicesIfRequired(uint32_t *pNumDevices, bool bForceRenum, bool bClearList)
 {
 	STLinkIf_StatusT ifStatus=STLINKIF_NO_ERR;
-	uint32_t status = SS_OK;
+	// uint32_t status = SS_OK;
 
 	if( pNumDevices != NULL ) {
 		// Will return 0 in case of error

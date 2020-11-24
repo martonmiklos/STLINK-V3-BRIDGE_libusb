@@ -39,8 +39,10 @@ const char * LogInterfaceString[STLINK_NB_INTERFACES] =
 /*
  * StlinkDevice constructor
  */
-StlinkDevice::StlinkDevice(STLinkInterface &StlinkIf): m_bStlinkConnected(false),m_bOpenExclusive(false),
-	m_pStlinkInterface(&StlinkIf)
+StlinkDevice::StlinkDevice(STLinkInterface &StlinkIf): 
+	m_bStlinkConnected(false),
+	m_pStlinkInterface(&StlinkIf),
+	m_bOpenExclusive(false)
 {
 	m_handle = NULL;
 	m_Version.Major_Ver = 0;
@@ -160,8 +162,8 @@ STLinkIf_StatusT StlinkDevice::PrivOpenStlink(int StlinkInstId)
  */
 STLinkIf_StatusT StlinkDevice::PrivOpenStlink(const char *pSerialNumber, bool bStrict) {
 	STLinkIf_StatusT ifStatus=STLINKIF_NO_ERR;
-	STLink_DeviceInfo2T devInfo2;
-	char * pEnumUniqueId = devInfo2.EnumUniqueId;
+	// STLink_DeviceInfo2T devInfo2;
+	// char * pEnumUniqueId = devInfo2.EnumUniqueId;
 
 	if( pSerialNumber == NULL ) {
 		LogTrace("NULL pointer for pSerialNumber in OpenStlink");

@@ -56,7 +56,7 @@ typedef unsigned int uint32_t;
 
 #define EXPORTED_API __attribute__ ((visibility ("default")))
 #define MAX_PATH PATH_MAX
-
+#define HANDLE void *
 #define PHANDLE void **
 #define PVOID  void *
 #define BYTE  unsigned char

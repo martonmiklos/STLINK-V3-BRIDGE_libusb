@@ -26,6 +26,7 @@
 #include "stlink_device.h"
 #include "stlink_fw_const_bridge.h"
 
+
 /* Exported types and constants ----------------------------------------------*/
 /** @addtogroup GENERAL
  * @{

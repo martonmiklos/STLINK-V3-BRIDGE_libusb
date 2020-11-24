@@ -25,8 +25,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "STLinkUSBDriver.h"
 
+#include <algorithm>
 #include <libusb-1.0/libusb.h>
-
 
 #ifdef USING_ERRORLOG
 #include "ErrLog.h"
@@ -52,8 +52,8 @@ typedef enum {
 	STLINKIF_CLOSE_ERR           ///< Error during device Close
 } STLinkIf_StatusT;
 
-#define STLINK_V3_VID 0x0483
-#define STLINK_V3_PID 0x374F
+const uint16_t STLINK_V3_VID = 0x0483;
+const uint16_t STLINK_V3_PID[] = {0x374E, 0x374F, 0x3753};
 
 /* Class -------------------------------------------------------------------- */
 /// STLinkInterface Class
