@@ -259,19 +259,20 @@ uint32_t STLinkInterface::STLink_SendCommand(void *pHandle, PDeviceRequest pRequ
 {
 	libusb_device_handle *handle = (libusb_device_handle *)pHandle;
 	int actualLength = 0;
+
+	// transmit command
 	int rc = libusb_bulk_transfer(handle, 0x06, (unsigned char*)pRequest->CDBByte, (int)pRequest->CDBLength, &actualLength, DwTimeOut);
-	if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == (int)pRequest->CDBLength) {
-		if (pRequest->BufferLength > 0) {
-			rc = libusb_bulk_transfer(handle, 0x86, (unsigned char*)pRequest->Buffer, (int)pRequest->BufferLength, &actualLength, DwTimeOut);
-			if (rc == LIBUSB_TRANSFER_COMPLETED && actualLength == (int)pRequest->BufferLength) {
-				return SS_OK;
-			} else {
-				return SS_ERR;
-			}
-		}
+	if (rc != LIBUSB_TRANSFER_COMPLETED || actualLength != (int)pRequest->CDBLength)
+		return SS_ERR;
+	if (pRequest->BufferLength == 0) // 0 length transfer should be supported, but breaks comms
 		return SS_OK;
-	}
-	return SS_ERR;
+	// read or write depending on request type
+	unsigned char ep = pRequest->InputRequest == REQUEST_READ_1ST_EPIN ? 0x86 : 0x06; // else REQUEST_WRITE_1ST_EPOUT
+	rc = libusb_bulk_transfer(handle, ep, (unsigned char*)pRequest->Buffer, (int)pRequest->BufferLength, &actualLength, DwTimeOut);
+	if (rc != LIBUSB_TRANSFER_COMPLETED || actualLength != (int)pRequest->BufferLength)
+		return SS_ERR;
+
+	return SS_OK;
 }
 
 //******************************************************************************
