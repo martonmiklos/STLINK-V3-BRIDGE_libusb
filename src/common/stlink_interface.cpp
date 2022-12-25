@@ -21,31 +21,16 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#if defined(_MSC_VER) &&  (_MSC_VER >= 1000)
-#include "stdafx.h"  // first include for windows visual studio
-#endif
-
-#include "criticalsectionlock.h"
 #include "stlink_interface.h"
 
 #include <string>
 
-#ifdef WIN32 //Defined for applications for Win32 and Win64.
-#include "shlwapi.h"
-#endif // WIN32
 /* Private typedef -----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 /* Private macros ------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
 /* Global variables ----------------------------------------------------------*/
-#ifdef WIN32 //Defined for applications for Win32 and Win64.
-// Create a critical section
-static CRITICAL_SECTION g_csInterface;
-#else
-// critical section object (statically allocated)
-static pthread_mutex_t g_csInterface =  PTHREAD_MUTEX_INITIALIZER;
-#endif // WIN32
 
 // used for debug trace: interface name according to STLink_EnumStlinkInterfaceT value
 const char * LogIfString[STLINK_NB_INTERFACES] = 
@@ -62,17 +47,8 @@ const char * LogIfString[STLINK_NB_INTERFACES] =
 STLinkInterface::STLinkInterface(STLink_EnumStlinkInterfaceT IfId): m_ifId(IfId), m_nbEnumDevices(0), m_bApiDllLoaded(false),
 	m_bDevInterfaceEnumerated(false)
 {
-#ifdef WIN32 //Defined for applications for Win32 and Win64.
-	m_hMod = NULL;
-#endif
 	m_pathOfProcess[0]='\0';
 
-#ifdef WIN32 //Defined for applications for Win32 and Win64.
-	// Initialize the critical section
-	InitializeCriticalSection(&g_csInterface);
-#else
-	// nothing to do (statically allocated with PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP macro)
-#endif
 #ifdef USING_ERRORLOG
 	// Error log management
 	m_pErrLog = NULL;
@@ -84,33 +60,12 @@ STLinkInterface::STLinkInterface(STLink_EnumStlinkInterfaceT IfId): m_ifId(IfId)
  */
 STLinkInterface::~STLinkInterface(void)
 {
-#ifdef WIN32
-	// Delete the critical section
-	DeleteCriticalSection(&g_csInterface);
-	//Defined for applications for Win32 and Win64.
-#ifdef USING_ERRORLOG
-	// Flush the trace log system after closing
-	if( m_pErrLog != NULL ) {
-		m_pErrLog->Dump();
-	}
-#endif
-
-	if( m_hMod != NULL )
-	{
-		if( FreeLibrary(m_hMod) != 0 )
-		{
-			// Successful
-			m_hMod = NULL;
-		}
-	}
-#else
 	// critical section deletion not needed because static mutex
 
 	//STLink_FreeLibrary();
 	if (m_bApiDllLoaded) {
 		libusb_exit(ctx);
 	}
-#endif // WIN32
 }
 /*
  * Trace logging mechanism, under compilation switch USING_ERRORLOG (requiring ErrLog.h and ErrLog.cpp)
@@ -507,12 +462,6 @@ STLinkIf_StatusT STLinkInterface::GetDeviceInfo2(int StlinkInstId, STLink_Device
 	STLinkIf_StatusT ifStatus = STLINKIF_NO_ERR;
 
 	if( IsLibraryLoaded() == true ) {
-#ifdef WIN32
-		if( STLink_GetDeviceInfo2 == NULL ) {
-			// STLinkUSBDriver is too old
-			return STLINKIF_NOT_SUPPORTED;
-		}
-#endif
 
 		// Enumerate the current STLink interface if not already done
 		ifStatus = EnumDevicesIfRequired(NULL, false, false);
@@ -707,8 +656,6 @@ STLinkIf_StatusT STLinkInterface::SendCommand(void *pHandle,
 		return STLINKIF_PARAM_ERR;
 	}
 
-	// Create a Mutex to avoid concurrent access to STLink_SendCommand
-	CSLocker locker(g_csInterface);
 
 	if( IsLibraryLoaded() == true ) {
 		if( m_ifId == STLINK_BRIDGE ) {

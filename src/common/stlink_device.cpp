@@ -18,10 +18,6 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
-#if defined(_MSC_VER) &&  (_MSC_VER >= 1000)
-#include "stdafx.h"  // first include for windows visual studio
-#endif
-
 #include "stlink_device.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,15 +62,6 @@ StlinkDevice::~StlinkDevice(void)
 {
 	// Close STLink even if failure
 	PrivCloseStlink();
-
-#ifdef WIN32 //Defined for applications for Win32 and Win64.
-#ifdef USING_ERRORLOG
-	// Flush the trace log system after closing
-	if( m_pErrLog != NULL ) {
-		m_pErrLog->Dump();
-	}
-#endif
-#endif // WIN32
 }
 
 /*

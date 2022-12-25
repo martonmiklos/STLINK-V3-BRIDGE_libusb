@@ -28,10 +28,6 @@
 ********************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
-#if defined(_MSC_VER) &&  (_MSC_VER >= 1000)
-#include "stdafx.h"  // first include for windows visual studio
-#endif
-
 #include <math.h>
 #include "bridge.h"
 
