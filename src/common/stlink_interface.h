@@ -26,7 +26,7 @@
 #include "STLinkUSBDriver.h"
 
 #include <algorithm>
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 #ifdef USING_ERRORLOG
 #include "ErrLog.h"
