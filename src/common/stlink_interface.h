@@ -26,7 +26,7 @@
 #include "STLinkUSBDriver.h"
 
 #include <algorithm>
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 #ifdef USING_ERRORLOG
 #include "ErrLog.h"
@@ -99,21 +99,8 @@ private:
 	ssize_t cnt;
 	STLinkIf_StatusT EnumDevicesIfRequired(uint32_t *pNumDevices, bool bForceRenum, bool bClearList);
 
-#ifdef WIN32 //Defined for applications for Win32 and Win64.
-	// New API of STLinkUSBDriver.dll; should be used if available
-	pSTLink_Reenumerate     STLink_Reenumerate;
-	pSTLink_GetNbDevices    STLink_GetNbDevices;
-	pSTLink_GetDeviceInfo2  STLink_GetDeviceInfo2;
-	pSTLink_OpenDevice      STLink_OpenDevice;
-	pSTLink_CloseDevice     STLink_CloseDevice;
-	pSTLink_SendCommand     STLink_SendCommand;
-#endif
-
 	void LogTrace(const char *pMessage, ...);
 
-#ifdef WIN32 //Defined for applications for Win32 and Win64.
-	HMODULE  m_hMod;
-#endif
 	STLink_EnumStlinkInterfaceT m_ifId;
 	uint32_t    m_nbEnumDevices;
 

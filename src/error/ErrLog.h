@@ -30,9 +30,7 @@
 
 #include "stlink_type.h" // for MAX_PATH if required
 /* Includes ------------------------------------------------------------------*/
-#ifndef WIN32 //Linux MacOS (not Win32 and Win64)
 #include <stdarg.h> // for va_list
-#endif
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/

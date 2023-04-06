@@ -33,11 +33,7 @@
 #include "stlink_type.h"
 
 /* Exported types ------------------------------------------------------------*/
-#ifdef WIN32 //Defined for applications for Win32 and Win64.
-#define STD_CALL __stdcall
-#else
 #define STD_CALL
-#endif
 
 
 #define  DEFAULT_SENSE_LEN  14
