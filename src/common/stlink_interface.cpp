@@ -70,7 +70,7 @@ STLinkInterface::~STLinkInterface(void)
 /*
  * Trace logging mechanism, under compilation switch USING_ERRORLOG (requiring ErrLog.h and ErrLog.cpp)
  */
-void STLinkInterface::LogTrace(const char *pMessage, ...)
+void STLinkInterface::LogTrace([[maybe_unused]]const char *pMessage, ...)
 {
 #ifdef USING_ERRORLOG
 	va_list args; // used to manage the variable argument list
@@ -85,6 +85,11 @@ void STLinkInterface::LogTrace(const char *pMessage, ...)
 uint32_t STLinkInterface::STLink_GetNbDevices(TEnumStlinkInterface IfId)
 {
 	uint32_t deviceCount = 0;
+
+    if( IfId != STLINK_BRIDGE ) {
+        return 0;
+    }
+
 	libusb_device **devs; //pointer to pointer of device, used to retrieve a list of devices
 	cnt = libusb_get_device_list(ctx, &devs); //get the list of devices
 	if (cnt < 0) {
@@ -93,7 +98,7 @@ uint32_t STLinkInterface::STLink_GetNbDevices(TEnumStlinkInterface IfId)
 
 	ssize_t i; //for iterating through the list
 	for(i = 0; i < cnt; i++) {
-		libusb_device_descriptor desc = {0};
+		libusb_device_descriptor desc;
 		int rc = libusb_get_device_descriptor(devs[i], &desc);
 		if (rc == 0) {
 			if (desc.idVendor == STLINK_V3_VID && 
@@ -127,13 +132,17 @@ uint32_t STLinkInterface::STLink_GetNbDevices(TEnumStlinkInterface IfId)
 //          Or caller used TDeviceInfo struct and size instead of TDeviceInfo2.
 //   SS_BAD_PARAMETER in case of unexpected values for IfId, DevIdxInList or pInfo
 //******************************************************************************
-uint32_t STLinkInterface::STLink_GetDeviceInfo2(TEnumStlinkInterface IfId, uint8_t DevIdxInList, TDeviceInfo2 *pInfo, uint32_t InfoSize)
+uint32_t STLinkInterface::STLink_GetDeviceInfo2(TEnumStlinkInterface IfId, uint8_t DevIdxInList, TDeviceInfo2 *pInfo, [[maybe_unused]]uint32_t InfoSize)
 {
+    if( IfId != STLINK_BRIDGE ) {
+        return SS_BAD_PARAMETER;
+    }
+
 	if (DevIdxInList >= cnt)
 		return SS_BAD_PARAMETER;
 
 	libusb_device *dev = devices[DevIdxInList];
-	libusb_device_descriptor desc = {0};
+	libusb_device_descriptor desc;
 	char string[256];
 	int rc = libusb_get_device_descriptor(dev, &desc);
 	if (rc == 0) {
@@ -182,6 +191,14 @@ uint32_t STLinkInterface::STLink_GetDeviceInfo2(TEnumStlinkInterface IfId, uint8
 //******************************************************************************
 uint32_t STLinkInterface::STLink_OpenDevice(TEnumStlinkInterface IfId, uint8_t DevIdxInList, uint8_t bExclusiveAccess, void **pHandle)
 {
+    if( IfId != STLINK_BRIDGE ) {
+        return SS_DEVICE_NOT_SUPPORTED;
+    }
+
+    if (bExclusiveAccess != 0) {
+        return SS_CMD_NOT_AVAILABLE;
+    }
+
 	if (DevIdxInList >= cnt)
 		return SS_BAD_PARAMETER;
 
@@ -263,8 +280,12 @@ uint32_t STLinkInterface::STLink_SendCommand(void *pHandle, PDeviceRequest pRequ
 //
 // Returns: SS_OK  = SUCCESS, Error otherwise (Error Code)
 //******************************************************************************
-uint32_t STLinkInterface::STLink_Reenumerate(TEnumStlinkInterface IfId, uint8_t bClearList)
+uint32_t STLinkInterface::STLink_Reenumerate(TEnumStlinkInterface IfId, [[maybe_unused]]uint8_t bClearList)
 {
+    if( IfId != STLINK_BRIDGE ) {
+        return SS_DEVICE_NOT_SUPPORTED;
+    }
+
 	uint32_t deviceCount = 0;
 	libusb_device **devs;
 	ssize_t cnt; //holding number of devices in list
@@ -300,7 +321,7 @@ uint32_t STLinkInterface::STLink_Reenumerate(TEnumStlinkInterface IfId, uint8_t 
  * @retval #STLINKIF_DLL_ERR  STLinkUSBDriver library not loaded
  * @retval #STLINKIF_NO_ERR If no error
  */
-STLinkIf_StatusT  STLinkInterface::LoadStlinkLibrary(const char *pPathOfProcess)
+STLinkIf_StatusT  STLinkInterface::LoadStlinkLibrary([[maybe_unused]]const char *pPathOfProcess)
 {
 	STLinkIf_StatusT ifStatus = STLINKIF_NO_ERR;
 
@@ -517,7 +538,7 @@ STLinkIf_StatusT STLinkInterface::GetDeviceInfo2(int StlinkInstId, STLink_Device
  * @retval #STLINKIF_DLL_ERR STLinkUSBDriver library not loaded
  * @retval #STLINKIF_NO_ERR If no error
  */
-STLinkIf_StatusT STLinkInterface::OpenDevice(int StlinkInstId, uint32_t StlinkIdTcp, bool bOpenExclusive, void **pHandle)
+STLinkIf_StatusT STLinkInterface::OpenDevice(int StlinkInstId, [[maybe_unused]]uint32_t StlinkIdTcp, bool bOpenExclusive, void **pHandle)
 {
 	STLinkIf_StatusT ifStatus = STLINKIF_NO_ERR;
 	uint32_t status;
@@ -568,7 +589,7 @@ STLinkIf_StatusT STLinkInterface::OpenDevice(int StlinkInstId, uint32_t StlinkId
  * @retval #STLINKIF_PARAM_ERR if NULL pointer
  * @retval #STLINKIF_NO_ERR If no error
  */
-STLinkIf_StatusT STLinkInterface::OpenDevice(const char *pSerialNumber, bool bStrict, uint32_t StlinkIdTcp, bool bOpenExclusive, void **pHandle) {
+STLinkIf_StatusT STLinkInterface::OpenDevice(const char *pSerialNumber, bool bStrict, [[maybe_unused]]uint32_t StlinkIdTcp, bool bOpenExclusive, void **pHandle) {
 	STLinkIf_StatusT ifStatus=STLINKIF_NO_ERR;
 	int stlinkInstId;
 	STLink_DeviceInfo2T devInfo2;
@@ -618,7 +639,7 @@ STLinkIf_StatusT STLinkInterface::OpenDevice(const char *pSerialNumber, bool bSt
  * @retval #STLINKIF_DLL_ERR
  * @retval #STLINKIF_NO_ERR If no error
  */
-STLinkIf_StatusT STLinkInterface::CloseDevice(void *pHandle, uint32_t StlinkIdTcp)
+STLinkIf_StatusT STLinkInterface::CloseDevice(void *pHandle, [[maybe_unused]]uint32_t StlinkIdTcp)
 {
 	uint32_t status=SS_OK;
 	STLinkIf_StatusT ifStatus = STLINKIF_NO_ERR;
@@ -656,7 +677,7 @@ STLinkIf_StatusT STLinkInterface::CloseDevice(void *pHandle, uint32_t StlinkIdTc
  * @retval #STLINKIF_NO_ERR If no error
  */
 STLinkIf_StatusT STLinkInterface::SendCommand(void *pHandle,
-											  uint32_t StlinkIdTcp, STLink_DeviceRequestT *pDevReq,
+											  [[maybe_unused]]uint32_t StlinkIdTcp, STLink_DeviceRequestT *pDevReq,
 											  const uint16_t UsbTimeoutMs)
 {
 	uint32_t ret;

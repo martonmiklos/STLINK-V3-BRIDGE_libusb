@@ -517,7 +517,7 @@ Brg_StatusT Brg::InitSPI(const Brg_SpiInitT *pInitParams)
 		pRq->CDBByte[7] = 0; // CRC disable (0)
 		pRq->CDBByte[8] = 0;
 	} else {
-		if( ((pInitParams->CrcPoly & 0x1) == 0x1) && (pInitParams->CrcPoly <= 0xFFFF) ) {
+		if( (pInitParams->CrcPoly & 0x1) == 0x1 ) {
 			// CRC polynomial >= 0x1 (odd value only)
 			pRq->CDBByte[7] = (uint8_t)(pInitParams->CrcPoly&0xFF);
 			pRq->CDBByte[8] = (uint8_t)((pInitParams->CrcPoly>>8)&0xFF);
@@ -962,7 +962,6 @@ Brg_StatusT Brg::CalculateI2cTimingReg(I2cModeT I2CSpeedMode, int SpeedFrequency
     double *pTHighMin = new double[MODE_NUMBER];
 
     double targetFreqI2C;   // Target frequency
-    double targetPeriodI2C; // Target period of clock
     double tmpSCLDEL;       // Calculate SCLDEL Time from  SCLDEL Bit
     double tmpSDADEL;       // Calculate SDLDEL Time from  SDLDEL Bit
     double clkMax;
@@ -1019,7 +1018,6 @@ Brg_StatusT Brg::CalculateI2cTimingReg(I2cModeT I2CSpeedMode, int SpeedFrequency
 	pTHighMin[2] = THIGH_MIN2;
 
 	targetFreqI2C = SpeedFrequency * 1000;   // Speed frequency
-	targetPeriodI2C = (1 / (targetFreqI2C)); // Speed period
 
 	clkMax = targetFreqI2C + targetFreqI2C * 0.2;
 	clkMin = targetFreqI2C - targetFreqI2C * 0.2;
@@ -1098,7 +1096,6 @@ Brg_StatusT Brg::CalculateI2cTimingReg(I2cModeT I2CSpeedMode, int SpeedFrequency
 	}
 
 	// SCLL SCLH calculation
-	int l = 0;
 	double solution = 0;
 	double prescR = 99;
 	int sdadel = 0;
@@ -1166,7 +1163,6 @@ Brg_StatusT Brg::CalculateI2cTimingReg(I2cModeT I2CSpeedMode, int SpeedFrequency
 					    (pPrescSDLDELSCLDELpossComb[j].SDLDEL == i2) &&
 					    (pPrescSDLDELSCLDELpossComb[j].SCLDEL == i3) &&
 					    (x == 0) ) {
-						l = pPRESCvalid[i3Sel];
 						sdadel = i2;
 						scldel = i3;
 						x++;

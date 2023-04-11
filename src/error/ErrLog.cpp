@@ -39,6 +39,8 @@ cErrLog::cErrLog()
 void cErrLog::Init (const char *pSzFileName, bool bResetFile)
 {
 	// To be completed: implementation defined
+    (void)pSzFileName;
+    (void)bResetFile;
 }
 /*****************************************************************************/    
 void cErrLog::Dump()

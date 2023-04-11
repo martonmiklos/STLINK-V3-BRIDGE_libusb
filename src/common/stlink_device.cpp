@@ -67,7 +67,7 @@ StlinkDevice::~StlinkDevice(void)
 /*
  * Trace logging mechanism, under compilation switch USING_ERRORLOG (requiring ErrLog.h and ErrLog.cpp)
  */
-void StlinkDevice::LogTrace(const char *pMessage, ...)
+void StlinkDevice::LogTrace([[maybe_unused]]const char *pMessage, ...)
 {
 #ifdef USING_ERRORLOG
 	va_list args; // used to manage the variable argument list
