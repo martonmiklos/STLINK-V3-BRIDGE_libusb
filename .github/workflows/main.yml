@@ -1,0 +1,31 @@
+name: build
+on: [push]
+
+jobs:
+  ubuntu_build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get install -y \
+            libusb-1.0.0-dev \
+            ninja-build \
+            python3 \
+            python3-pip
+
+      - name: Install Python dependencies
+        run: sudo pip install meson pre-commit
+
+      - name: Check commit hooks
+        run: pre-commit run --all-files
+
+      - name: Build
+        run: |
+            meson setup --warnlevel 2 --werror build
+            meson compile -C build
+
+      - name: Install
+        run: sudo meson install -C build
