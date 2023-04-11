@@ -17,8 +17,15 @@ This project uses the [meson build system](https://mesonbuild.com), however ther
 
 One can run the example program after building by doing `./build/example/stlinkv3-lib-example-app`
 
+# Contributing
+We use [pre-commit](https://pre-commit.com/) to manage pre-commit Git hooks. Install them via:
+```
+pip install pre-commit
+pre-commit install
+```
+To run on all files now: `pre-commit run --all-files`
 
-## Achtung !! Warning!! Pozor!! 
+## Achtung !! Warning!! Pozor!!
 This is not a traditional open source project, it licensed under ST's Ultimate Liberty License see:
 
 https://www.st.com/SLA0044

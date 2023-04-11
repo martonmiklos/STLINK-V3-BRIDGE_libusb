@@ -2,17 +2,19 @@
 #include <bridge.h>
 
 // Standard includes
+#include <chrono>
 #include <iostream>
 #include <thread>
-#include <chrono>
 
 using namespace std;
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 
-void perform_gpio_test(Brg *stlink_bridge);
+void
+perform_gpio_test(Brg *stlink_bridge);
 
-int main()
+int
+main()
 {
     cout << "Welcome to the example!" << endl;
 
@@ -29,12 +31,12 @@ int main()
     stlink_interface.LoadStlinkLibrary("");
     Brg_StatusT status = stlink_bridge.OpenStlink();
     switch (status) {
-        case BRG_NO_ERR:
-            cout << "success!" << endl;
-            break;
-        default:
-            cout << "fail! Some error occured (" << status << ")" << endl;
-            break;
+    case BRG_NO_ERR:
+        cout << "success!" << endl;
+        break;
+    default:
+        cout << "fail! Some error occured (" << status << ")" << endl;
+        break;
     }
 
     if (status == BRG_NO_ERR) {
@@ -45,20 +47,22 @@ int main()
     }
 }
 
-int brg_status_print(Brg_StatusT status)
+int
+brg_status_print(Brg_StatusT status)
 {
     switch (status) {
-        case BRG_NO_ERR:
-            cout << "success!" << endl;
-            return 0;
-        default:
-            cout << "fail! Some error occured (" << status << ")" << endl;
-            return 1;
+    case BRG_NO_ERR:
+        cout << "success!" << endl;
+        return 0;
+    default:
+        cout << "fail! Some error occured (" << status << ")" << endl;
+        return 1;
     }
 }
 
 // Write/set gpios all at once
-int write_gpio_all(Brg *brg, int gpios)
+int
+write_gpio_all(Brg *brg, int gpios)
 {
     Brg_StatusT status;
     uint8_t error_mask = 0;
@@ -78,7 +82,8 @@ int write_gpio_all(Brg *brg, int gpios)
     return 0;
 }
 
-void perform_gpio_test(Brg *stlink_bridge)
+void
+perform_gpio_test(Brg *stlink_bridge)
 {
     Brg_StatusT status;
     // Define just one to apply to all GPIOs

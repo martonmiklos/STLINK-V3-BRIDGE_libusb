@@ -3,13 +3,13 @@
   * @file    ErrLog.h
   * @author  MCD Application Team
   * @brief   Header for ErrLog.cpp module. All tracing mechanisms:
-	1. ErrorLog: circular buffer always filled in, that can be dumped into
-	    a file after an error for instance
-	2. TraceLog: immediate trace logging in a file (once activated, the file
-	   is opened then closed on each trace action)
-	3. TraceFunctionCall: manages automatic indentation for tracing function
-	   callings in ErrorLog and/or TraceLog systems. In order to trace a function,
-		 just instantiate the object.
+        1. ErrorLog: circular buffer always filled in, that can be dumped into
+            a file after an error for instance
+        2. TraceLog: immediate trace logging in a file (once activated, the file
+           is opened then closed on each trace action)
+        3. TraceFunctionCall: manages automatic indentation for tracing function
+           callings in ErrorLog and/or TraceLog systems. In order to trace a
+  function, just instantiate the object.
   ******************************************************************************
   * @attention
   *
@@ -38,26 +38,29 @@
 /* Exported macros -----------------------------------------------------------*/
 
 /* Class -------------------------------------------------------------------- */
-class cErrLog 	// To be completed: implementation defined
+class cErrLog // To be completed: implementation defined
 {
-public:
-	cErrLog();
-	// to be completed: implementation defined
-	// bResetFile == true clear the content of the file if it exists
-	void Init (const char *pSzFileName, bool bResetFile);
-	// Flush the file if not already done in LogTrace: to be completed: implementation defined
-	void Dump();
+  public:
+    cErrLog();
+    // to be completed: implementation defined
+    // bResetFile == true clear the content of the file if it exists
+    void
+    Init(const char *pSzFileName, bool bResetFile);
+    // Flush the file if not already done in LogTrace: to be completed:
+    // implementation defined
+    void
+    Dump();
 
-	// General log trace routine: to be completed: implementation defined
-	void LogTrace(const char *pMessage, ...);
-	void LogTrace(const char *pMessage, va_list Args);
+    // General log trace routine: to be completed: implementation defined
+    void
+    LogTrace(const char *pMessage, ...);
+    void
+    LogTrace(const char *pMessage, va_list Args);
 
-private:
-
-	// To be completed: implementation defined
+  private:
+    // To be completed: implementation defined
 };
 
 #endif /* ERRLOG_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
-
