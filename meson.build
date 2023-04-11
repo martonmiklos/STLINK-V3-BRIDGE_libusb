@@ -3,6 +3,7 @@ project('libstlinkv3_bridge_libusb', 'cpp',
     license_files: 'LICENSE',
     meson_version: '>=1.1',
     version: '0.1',
+    default_options: 'cpp_std=gnu++17'
     )
 
 install_header_files = [
