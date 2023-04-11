@@ -68,6 +68,9 @@ void cErrLog::LogTrace(const char *pMessage, va_list Args)
 	// Trace the specified string into log file
 	// To be completed: implementation defined
 	// possible implementation: write in a buffer or in a file
+
+    vfprintf(stderr, pMessage, Args);
+    fprintf(stderr, "\n");
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
