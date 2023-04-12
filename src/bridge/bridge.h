@@ -654,6 +654,11 @@ class Brg : public StlinkDevice
     bool
     IsOldBrgFwVersion(void) const;
 
+    void
+    CloseBridgeOnDestruction(void);
+    void
+    DoNotCloseBridgeOnDestruction(void);
+
   private:
     Brg_StatusT
     AnalyzeStatus(const uint16_t *pStatus);
@@ -677,6 +682,7 @@ class Brg : public StlinkDevice
 
     // Global to manage I2C partial transaction (START, STOP, CONT)
     uint16_t m_slaveAddrPartialI2cTrans;
+    bool m_close_bridge_on_destruction;
 
     Brg_StatusT
     CalculateI2cTimingReg(I2cModeT I2CSpeedMode, int SpeedFrequency,

@@ -94,7 +94,8 @@ const double THIGH_MIN2 = (double)(0.26 / pow((double)10, 6));
  * STLinkInterface(STLINK_BRIDGE)
  */
 Brg::Brg(STLinkInterface &StlinkIf)
-    : StlinkDevice(StlinkIf), m_slaveAddrPartialI2cTrans(0)
+    : StlinkDevice(StlinkIf), m_slaveAddrPartialI2cTrans(0),
+      m_close_bridge_on_destruction(true)
 {
     this->SetOpenModeExclusive(true);
 }
@@ -105,7 +106,9 @@ Brg::Brg(STLinkInterface &StlinkIf)
 Brg::~Brg(void)
 {
     // Close device if necessary
-    CloseBridge(COM_UNDEF_ALL);
+    if (m_close_bridge_on_destruction) {
+        CloseBridge(COM_UNDEF_ALL);
+    }
     // Close STLink is done by ~StlinkDevice
 }
 
@@ -3198,6 +3201,26 @@ Brg::IsReadNoWaitI2CSupport(void) const
     } else {
         return true;
     }
+}
+
+/**
+ * Close connection to bridge when destructor is called. This is the default and
+ * results in the GPIO pins reverting to a floating state.
+ */
+void
+Brg::CloseBridgeOnDestruction(void)
+{
+    m_close_bridge_on_destruction = true;
+}
+
+/**
+ * Do not close the connection to the bridge when destructor is called. This
+ * will result in the GPIO pins retaining their state.
+ */
+void
+Brg::DoNotCloseBridgeOnDestruction(void)
+{
+    m_close_bridge_on_destruction = false;
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
