@@ -25,6 +25,11 @@ pre-commit install
 ```
 To run on all files now: `pre-commit run --all-files`
 
+# Feedback
+
+If you end up building upon this library let us know, we could list it here (for e.g. I2C EEPROM programming utility, etc.).
+Let's make the STLinkV3 a more versatile tool for hackers!
+
 ## Achtung !! Warning!! Pozor!!
 This is not a traditional open source project, it licensed under ST's Ultimate Liberty License see:
 
