@@ -56,19 +56,6 @@ typedef unsigned int uint32_t;
 
 #define EXPORTED_API __attribute__((visibility("default")))
 #define MAX_PATH     PATH_MAX
-#define HANDLE       void *
-#define PHANDLE      void **
-#define PVOID        void *
-#define BYTE         unsigned char
-#define CHAR         char
-#define TCHAR        char
-#define WORD         unsigned short // unsigned 16
-#define DWORD        unsigned int   // unsigned 32 bits
-#define LONG                                                                   \
-    int // int for signed 32 bits; Note that "long" is signed 32 bits on
-        // Windows, signed 64 bits on Linux/MacOS => dangerous
-#define LPSTR                char *
-#define INVALID_HANDLE_VALUE 0xFFFFFFFF
 typedef enum { FALSE = 0, TRUE } BOOL;
 #endif // WIN32
 
