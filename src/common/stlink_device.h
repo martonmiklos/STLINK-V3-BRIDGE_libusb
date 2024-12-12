@@ -134,7 +134,7 @@ class StlinkDevice
     STLinkInterface *m_pStlinkInterface;
 
     // Mode for device opening: shared or exclusive
-    bool m_bOpenExclusive;
+    bool m_bOpenExclusive = false;
 
 #ifdef USING_ERRORLOG
     // Error log management
