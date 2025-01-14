@@ -49,8 +49,6 @@ STLinkInterface::STLinkInterface(STLink_EnumStlinkInterfaceT IfId)
     : m_ifId(IfId), m_nbEnumDevices(0), m_bApiDllLoaded(false),
       m_bDevInterfaceEnumerated(false)
 {
-    m_pathOfProcess[0] = '\0';
-
 #ifdef USING_ERRORLOG
     // Error log management
     m_pErrLog = NULL;

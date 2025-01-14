@@ -105,11 +105,6 @@ class STLinkInterface
     SendCommand(void *pHandle, uint32_t StlinkIdTcp,
                 STLink_DeviceRequestT *pDevReq, const uint16_t UsbTimeoutMs);
 
-    const char *
-    GetPathOfProcess(void) const
-    {
-        return m_pathOfProcess;
-    }
 #ifdef USING_ERRORLOG
     void
     BindErrLog(cErrLog *pErrLog);
@@ -128,9 +123,6 @@ class STLinkInterface
 
     STLink_EnumStlinkInterfaceT m_ifId;
     uint32_t m_nbEnumDevices;
-
-    // stored path of process in ASCII
-    char m_pathOfProcess[MAX_PATH];
 
     // Flag for STLinkUSBDriver.dll loaded state
     bool m_bApiDllLoaded;
