@@ -228,8 +228,8 @@ STLinkInterface::STLink_OpenDevice(TEnumStlinkInterface IfId,
     libusb_device *dev = devices[DevIdxInList];
     libusb_device_handle *handle = nullptr;
     int ret = libusb_open(dev, &handle);
-    libusb_claim_interface(handle, 4);
     if (LIBUSB_SUCCESS == ret) {
+        libusb_claim_interface(handle, 4);
         *pHandle = handle;
         return SS_OK;
     }
