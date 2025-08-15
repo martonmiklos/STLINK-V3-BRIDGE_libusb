@@ -23,7 +23,7 @@
 /* Includes ------------------------------------------------------------------*/
 /* API shared with embedded code ---------------------------------------------*/
 #include "stlink_fw_api_bridge.h"
-#include "stlink_fw_api_common.h"
+#include "../common/stlink_fw_api_common.h"
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/

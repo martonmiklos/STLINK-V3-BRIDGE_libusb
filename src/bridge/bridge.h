@@ -23,7 +23,7 @@
 #ifndef _BRIDGE_H
 #define _BRIDGE_H
 /* Includes ------------------------------------------------------------------*/
-#include "stlink_device.h"
+#include "../common/stlink_device.h"
 #include "stlink_fw_const_bridge.h"
 
 /* Exported types and constants ----------------------------------------------*/
