@@ -66,7 +66,7 @@ STLinkInterface::~STLinkInterface(void)
 
     // STLink_FreeLibrary();
     if (m_bApiDllLoaded) {
-        for (uint32_t i = 0; i<m_nbEnumDevices; i++) {
+        for (uint32_t i = 0; i < m_nbEnumDevices; i++) {
             libusb_unref_device(devices[i]);
         }
         libusb_exit(ctx);
