@@ -20,6 +20,10 @@
 #ifndef _STLINK_TYPE_H
 #define _STLINK_TYPE_H
 
+#if defined(_WIN32) && !defined(WIN32) // MSVC and MinGW
+#define WIN32
+#endif
+
 #ifdef WIN32 // Defined for applications for Win32 and Win64.
 #if _MSC_VER > 1000
 #pragma once
