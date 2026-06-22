@@ -37,6 +37,38 @@
 const char *LogIfString[STLINK_NB_INTERFACES] = {"DBG", "DBG2", "DBG SERVER",
                                                  "BRIDGE"};
 
+// The STLink bridge function communicates over these bulk endpoints. The
+// interface that owns them is not at a fixed index: It shifts, depending on
+// the STLink type and configuration (MSD+VCP vs 2xVCP).
+static const uint8_t STLINK_BRIDGE_EP_OUT = 0x06;
+static const uint8_t STLINK_BRIDGE_EP_IN = 0x86;
+
+static int
+FindBridgeInterface(libusb_device *dev)
+{
+    struct libusb_config_descriptor *cfg = nullptr;
+    if (libusb_get_active_config_descriptor(dev, &cfg) != LIBUSB_SUCCESS) {
+        return -1;
+    }
+
+    int ifNumber = -1;
+    for (uint8_t i = 0; (i < cfg->bNumInterfaces) && (ifNumber < 0); i++) {
+        const struct libusb_interface *itf = &cfg->interface[i];
+        for (int alt = 0; (alt < itf->num_altsetting) && (ifNumber < 0); alt++) {
+            const struct libusb_interface_descriptor *id = &itf->altsetting[alt];
+            for (uint8_t e = 0; e < id->bNumEndpoints; e++) {
+                if (id->endpoint[e].bEndpointAddress == STLINK_BRIDGE_EP_OUT) {
+                    ifNumber = id->bInterfaceNumber;
+                    break;
+                }
+            }
+        }
+    }
+
+    libusb_free_config_descriptor(cfg);
+    return ifNumber;
+}
+
 /* Class Functions Definition ------------------------------------------------*/
 
 /**
@@ -228,12 +260,19 @@ STLinkInterface::STLink_OpenDevice(TEnumStlinkInterface IfId,
     libusb_device *dev = devices[DevIdxInList];
     libusb_device_handle *handle = nullptr;
     int ret = libusb_open(dev, &handle);
-    libusb_claim_interface(handle, 4);
-    if (LIBUSB_SUCCESS == ret) {
-        *pHandle = handle;
-        return SS_OK;
+    if (ret != LIBUSB_SUCCESS) {
+        return SS_ERR;
     }
-    return SS_ERR;
+
+    int ifNumber = FindBridgeInterface(dev);
+    if (ifNumber < 0) {
+        libusb_close(handle);
+        return SS_ERR;
+    }
+    libusb_claim_interface(handle, ifNumber);
+
+    *pHandle = handle;
+    return SS_OK;
 }
 
 //******************************************************************************
@@ -247,8 +286,12 @@ STLinkInterface::STLink_OpenDevice(TEnumStlinkInterface IfId,
 uint32_t
 STLinkInterface::STLink_CloseDevice(void *pHandle)
 {
-    libusb_release_interface((libusb_device_handle *)pHandle, 3);
-    libusb_close((libusb_device_handle *)pHandle);
+    libusb_device_handle *handle = (libusb_device_handle *)pHandle;
+    int ifNumber = FindBridgeInterface(libusb_get_device(handle));
+    if (ifNumber >= 0) {
+        libusb_release_interface(handle, ifNumber);
+    }
+    libusb_close(handle);
     return SS_OK;
 }
 //******************************************************************************
@@ -270,7 +313,7 @@ STLinkInterface::STLink_SendCommand(void *pHandle, PDeviceRequest pRequest,
 
     // transmit command
     int rc = libusb_bulk_transfer(
-        handle, 0x06, (unsigned char *)pRequest->CDBByte,
+        handle, STLINK_BRIDGE_EP_OUT, (unsigned char *)pRequest->CDBByte,
         (int)pRequest->CDBLength, &actualLength, DwTimeOut);
     if (rc != LIBUSB_TRANSFER_COMPLETED ||
         actualLength != (int)pRequest->CDBLength)
@@ -280,8 +323,8 @@ STLinkInterface::STLink_SendCommand(void *pHandle, PDeviceRequest pRequest,
         return SS_OK;
     // read or write depending on request type
     unsigned char ep = pRequest->InputRequest == REQUEST_READ_1ST_EPIN
-                           ? 0x86
-                           : 0x06; // else REQUEST_WRITE_1ST_EPOUT
+                           ? STLINK_BRIDGE_EP_IN
+                           : STLINK_BRIDGE_EP_OUT; // else REQUEST_WRITE_1ST_EPOUT
     rc = libusb_bulk_transfer(handle, ep, (unsigned char *)pRequest->Buffer,
                               (int)pRequest->BufferLength, &actualLength,
                               DwTimeOut);
