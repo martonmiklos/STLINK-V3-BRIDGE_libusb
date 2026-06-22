@@ -325,6 +325,12 @@ STLinkInterface::STLink_Reenumerate(TEnumStlinkInterface IfId,
         return SS_DEVICE_NOT_SUPPORTED;
     }
 
+    // Release references taken on a previous enumeration
+    for (uint32_t i = 0; i < m_nbEnumDevices; i++) {
+        libusb_unref_device(devices[i]);
+    }
+    m_nbEnumDevices = 0;
+
     uint32_t deviceCount = 0;
     libusb_device **devs;
     ssize_t cnt; // holding number of devices in list
@@ -348,6 +354,7 @@ STLinkInterface::STLink_Reenumerate(TEnumStlinkInterface IfId,
         }
     }
     libusb_free_device_list(devs, 1);
+    m_nbEnumDevices = deviceCount;
     return SS_OK;
 }
 
@@ -436,9 +443,6 @@ STLinkInterface::EnumDevices(uint32_t *pNumDevices, bool bClearList)
                 m_bApiDllLoaded = false;
                 return STLINKIF_DLL_ERR;
             }
-            // Note that STLink_Reenumerate might fail because of issue during
-            // serial number retrieving which is not a blocking error here;
-            m_nbEnumDevices = STLink_GetNbDevices(m_ifId);
 
             if (m_nbEnumDevices == 0) {
                 LogTrace(
