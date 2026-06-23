@@ -134,7 +134,7 @@ STLinkInterface::STLink_GetNbDevices(TEnumStlinkInterface IfId)
 
     libusb_device **devs; // pointer to pointer of device, used to retrieve a
                           // list of devices
-    cnt = libusb_get_device_list(ctx, &devs); // get the list of devices
+    ssize_t cnt = libusb_get_device_list(ctx, &devs); // get the list of devices
     if (cnt < 0) {
         return 0;
     }
@@ -188,7 +188,7 @@ STLinkInterface::STLink_GetDeviceInfo2(TEnumStlinkInterface IfId,
         return SS_BAD_PARAMETER;
     }
 
-    if (DevIdxInList >= cnt)
+    if (DevIdxInList >= m_nbEnumDevices)
         return SS_BAD_PARAMETER;
 
     libusb_device *dev = devices[DevIdxInList];
@@ -256,7 +256,7 @@ STLinkInterface::STLink_OpenDevice(TEnumStlinkInterface IfId,
         return SS_CMD_NOT_AVAILABLE;
     }
 
-    if (DevIdxInList >= cnt)
+    if (DevIdxInList >= m_nbEnumDevices)
         return SS_BAD_PARAMETER;
 
     libusb_device *dev = devices[DevIdxInList];
