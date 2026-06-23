@@ -22,8 +22,8 @@
 #define _STLINK_FW_CONST_BRIDGE_H
 /* Includes ------------------------------------------------------------------*/
 /* API shared with embedded code ---------------------------------------------*/
+#include "../common/stlink_fw_api_common.h"
 #include "stlink_fw_api_bridge.h"
-#include "stlink_fw_api_common.h"
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
