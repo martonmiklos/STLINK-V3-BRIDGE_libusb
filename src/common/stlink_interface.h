@@ -118,7 +118,6 @@ class STLinkInterface
   private:
     libusb_context *ctx = nullptr; // a libusb session
     libusb_device *devices[256];
-    ssize_t cnt;
     STLinkIf_StatusT
     EnumDevicesIfRequired(uint32_t *pNumDevices, bool bForceRenum,
                           bool bClearList);
