@@ -54,8 +54,10 @@ FindBridgeInterface(libusb_device *dev)
     int ifNumber = -1;
     for (uint8_t i = 0; (i < cfg->bNumInterfaces) && (ifNumber < 0); i++) {
         const struct libusb_interface *itf = &cfg->interface[i];
-        for (int alt = 0; (alt < itf->num_altsetting) && (ifNumber < 0); alt++) {
-            const struct libusb_interface_descriptor *id = &itf->altsetting[alt];
+        for (int alt = 0; (alt < itf->num_altsetting) && (ifNumber < 0);
+             alt++) {
+            const struct libusb_interface_descriptor *id =
+                &itf->altsetting[alt];
             for (uint8_t e = 0; e < id->bNumEndpoints; e++) {
                 if (id->endpoint[e].bEndpointAddress == STLINK_BRIDGE_EP_OUT) {
                     ifNumber = id->bInterfaceNumber;
@@ -322,9 +324,10 @@ STLinkInterface::STLink_SendCommand(void *pHandle, PDeviceRequest pRequest,
         0) // 0 length transfer should be supported, but breaks comms
         return SS_OK;
     // read or write depending on request type
-    unsigned char ep = pRequest->InputRequest == REQUEST_READ_1ST_EPIN
-                           ? STLINK_BRIDGE_EP_IN
-                           : STLINK_BRIDGE_EP_OUT; // else REQUEST_WRITE_1ST_EPOUT
+    unsigned char ep =
+        pRequest->InputRequest == REQUEST_READ_1ST_EPIN
+            ? STLINK_BRIDGE_EP_IN
+            : STLINK_BRIDGE_EP_OUT; // else REQUEST_WRITE_1ST_EPOUT
     rc = libusb_bulk_transfer(handle, ep, (unsigned char *)pRequest->Buffer,
                               (int)pRequest->BufferLength, &actualLength,
                               DwTimeOut);
